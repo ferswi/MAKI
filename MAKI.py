@@ -90,10 +90,10 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
             continue
 
         #todo : arg/fix this, its not user friendly at all but here we go :
-        mol2_kinases_path =(r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_to_mol2_kinases")
+        mol2_kinases_path =(r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_to_mol2_kinases")
         mol2_kinases = sorted(next(os.walk(mol2_kinases_path), (None, None, []))[2])
 
-        for kin_target in mol2_kinases:
+        for kin_target in mol2_kinases[403:]:
             if kin_target.endswith(".mol2"):
                 kinase_name = (kin_target.split("_")[1])
                 kinase_dir = next((d for d in Path(root_cleft_dir).iterdir() if d.is_dir() and d.name == kinase_name), None)
@@ -118,8 +118,9 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
 
 if __name__ == '__main__':
     #id_list, file_list = __list_files_cleft(input_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_kinases")
-    #getcleft(input_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_kinases", output_clefts_proteome=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2/AF2_kinase_clefts")
-    nrgrank(ligands_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\10_lig_test_set",root_cleft_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_kinase_clefts", output_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_nrgrank")
+
+    getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts")
+    nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_ligands", root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts", output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank")
 
 
 
