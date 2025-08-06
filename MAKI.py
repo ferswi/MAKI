@@ -75,7 +75,7 @@ def remove_clfs(clefts_id_folder, verbose=False):
                 continue
 
 def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
-    for ligand_file in os.listdir(ligands_dir):
+    for ligand_file in os.listdir(ligands_dir)[1:]:
         if ligand_file.endswith(".mol2"):
             conformers_per_molecule=1
             if not ligand_file:
@@ -93,7 +93,7 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
         mol2_kinases_path =(r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_to_mol2_kinases")
         mol2_kinases = sorted(next(os.walk(mol2_kinases_path), (None, None, []))[2])
 
-        for kin_target in mol2_kinases[403:]:
+        for kin_target in mol2_kinases[:403]:
             if kin_target.endswith(".mol2"):
                 kinase_name = (kin_target.split("_")[1])
                 kinase_dir = next((d for d in Path(root_cleft_dir).iterdir() if d.is_dir() and d.name == kinase_name), None)
@@ -119,7 +119,7 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
 if __name__ == '__main__':
     #id_list, file_list = __list_files_cleft(input_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_kinases")
 
-    getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts")
+    #getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts")
     nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_ligands", root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts", output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank")
 
 
