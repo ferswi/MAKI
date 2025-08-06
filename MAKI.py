@@ -76,14 +76,18 @@ def remove_clfs(clefts_id_folder, verbose=False):
 
 def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
     for ligand_file in os.listdir(ligands_dir):
-        conformers_per_molecule=1
-        if not ligand_file:
-            verbose and print("catastrophic failure,no mol2 files here, find the drugs ! ")
-        ligand_save_dir = process_ligands(
-            ligand_path=os.path.join(ligands_dir,ligand_file),
-            conformers_per_molecule=conformers_per_molecule,
-            output_dir=fr"{ligands_dir}_{str(ligand_file)}" ,
-            overwrite=False)
+        if ligand_file.endswith(".mol2"):
+            conformers_per_molecule=1
+            if not ligand_file:
+                verbose and print("catastrophic failure,no mol2 files here, find the drugs ! ")
+            ligand_name = Path(ligand_file).stem
+            ligand_save_dir = process_ligands(
+                ligand_path=os.path.join(ligands_dir,ligand_file),
+                conformers_per_molecule=conformers_per_molecule,
+                output_dir=os.path.join(ligands_dir,ligand_name),
+                overwrite=False)
+        else:
+            continue
 
         #todo : arg/fix this, its not user friendly at all but here we go :
         mol2_kinases_path =(r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_to_mol2_kinases")
@@ -107,7 +111,7 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
                     result_file_path = nrgrank_main(target_name=kinase_name,
                                                     preprocessed_target_path=target_save_dir,
                                                     preprocessed_ligand_path=ligand_save_dir,
-                                                    result_folder_path=fr"{output_dir}_nrgrankres_{ligand_file}",
+                                                    result_folder_path=os.path.join(output_dir,ligand_file,kin_target),
                                                     USE_CLASH=False,
                                                     POSES_SAVED_PER_MOLECULE=0)
                     verbose and print(f" ฅ≽(•⩊ •マฅ≼ NRGrank ran !  {result_file_path}")
