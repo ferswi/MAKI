@@ -106,12 +106,13 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
                     create_new_dir=True,
                     overwrite=False)
 
+                ligand_output_name = ligand_.split(".mol2")[0]
 
                 if target_save_dir:
                     result_file_path = nrgrank_main(target_name=kinase_name,
                                                     preprocessed_target_path=target_save_dir,
                                                     preprocessed_ligand_path=ligand_save_dir,
-                                                    result_folder_path=os.path.join(output_dir,ligand_file,kin_target),
+                                                    result_folder_path=os.path.join(output_dir,ligand_output_name,kin_target),
                                                     USE_CLASH=False,
                                                     POSES_SAVED_PER_MOLECULE=0)
                     verbose and print(f" ฅ≽(•⩊ •マฅ≼ NRGrank ran !  {result_file_path}")

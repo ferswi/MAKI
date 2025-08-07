@@ -5,7 +5,11 @@ import csv
 
 
 def creating_nrgrank_df(input_dir):
-    print("ฅ≽(•⩊ •マฅ≼")
+    ligands = []
+    for ligand in sorted(os.listdir(input_dir)):
+        ligand_path=os.path.join(input_dir, ligand)
+        ligands.append(ligand_path)
+        print(ligands)
 
 def overlap_theo_exp(empiric_df, experimental_df):
     empiric_kinases = set(empiric_df["Kinase"])
@@ -68,14 +72,16 @@ def merging_dataframes(nrgrank_df, davis_df, output_path,overlapping_kinases):
     return ranked_df
 
 if __name__ == '__main__':
-    davis_df = pd.read_csv(r"C:\Users\sophi\Documents\NRG\KINASES\csv_davis_to_compare_sample_to.csv")
-    nrgrank_df = pd.read_csv(r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases.csv")
+    davis_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx")
+    #nrgrank_df = pd.read_csv(r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases.csv")
 
-    overlapping_kinases = overlap_theo_exp(empiric_df=davis_df, experimental_df=nrgrank_df)
+    nrgrank_df = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank")
 
-    merged_df = merging_dataframes(
-        nrgrank_df=r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases.csv",
-        davis_df=r"C:\Users\sophi\Documents\NRG\KINASES\csv_davis_to_compare_sample_to.csv",
-        output_path=r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases_merged.csv",
-        overlapping_kinases=overlapping_kinases
-    )
+    #overlapping_kinases = overlap_theo_exp(empiric_df=davis_df, experimental_df=nrgrank_df)
+
+    # merged_df = merging_dataframes(
+    #     nrgrank_df=r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases.csv",
+    #     davis_df=r"C:\Users\sophi\Documents\NRG\KINASES\csv_davis_to_compare_sample_to.csv",
+    #     output_path=r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases_merged.csv",
+    #     overlapping_kinases=overlapping_kinases
+    # )
