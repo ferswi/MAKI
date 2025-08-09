@@ -104,15 +104,13 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
                     target_mol2_path=str(os.path.join(mol2_kinases_path,kin_target)),
                     binding_site_file_path=str(bdsite_file_path),
                     create_new_dir=True,
-                    overwrite=False)
-
-                ligand_output_name = ligand_.split(".mol2")[0]
-
+                    overwrite=True)
+                
                 if target_save_dir:
                     result_file_path = nrgrank_main(target_name=kinase_name,
                                                     preprocessed_target_path=target_save_dir,
                                                     preprocessed_ligand_path=ligand_save_dir,
-                                                    result_folder_path=os.path.join(output_dir,ligand_output_name,kin_target),
+                                                    result_folder_path=os.path.join(output_dir,ligand_name.split(".mol2")[0],kin_target),
                                                     USE_CLASH=False,
                                                     POSES_SAVED_PER_MOLECULE=0)
                     verbose and print(f" ฅ≽(•⩊ •マฅ≼ NRGrank ran !  {result_file_path}")
@@ -120,7 +118,7 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
 if __name__ == '__main__':
     #id_list, file_list = __list_files_cleft(input_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_kinases")
 
-    #getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts")
+    getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts")
     nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_ligands", root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts", output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank")
 
 

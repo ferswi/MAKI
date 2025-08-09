@@ -2,29 +2,51 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import csv
+import openpyxl
+from collections import defaultdict
 
 
-def creating_nrgrank_df(input_dir):
+def creating_nrgrank_df(input_dir, verbose, output_path):
+    data = defaultdict(dict)
     ligands = []
     for ligand in sorted(os.listdir(input_dir)):
-        ligand_path=os.path.join(input_dir, ligand)
-        ligands.append(ligand_path)
-        print(ligands)
+        ligand_path = os.path.join(input_dir, ligand)
+        ligands.append(ligand)
+        verbose and print("≽(•⩊ •マ≼ Ligands found for MAKI: ", ligand)
+        for kinase_repo in sorted(os.listdir(ligand_path)):
+            kinase_repo_path = (os.path.join(ligand_path, kinase_repo))
+            for kinase_file in sorted(os.listdir(kinase_repo_path)):
+                if kinase_file.endswith(".csv"):
+                    csv_file = os.path.join(kinase_repo_path, kinase_file)
+                    df = pd.read_csv(csv_file, header=None)
+                    nrg_value = df.iloc[1, 1]
+                    data[kinase_file][ligand] = nrg_value
+                else:
+                    continue
+    nrgrank_df = pd.DataFrame.from_dict(data, orient='index')
+    nrgrank_df.index.name = 'Kinase'
+    print("tail", nrgrank_df.tail())
+    nrgrank_df = nrgrank_df[ligands]
+    nrgrank_df.to_csv(output_path)
+    return nrgrank_df
 
-def overlap_theo_exp(empiric_df, experimental_df):
+
+def overlap_theo_exp(empiric_df, experimental_df, verbose):
     empiric_kinases = set(empiric_df["Kinase"])
     experimental_kinases = set(experimental_df["Kinase"])
     overlapping_kinases = empiric_kinases.intersection(experimental_kinases)
+    verbose and print("≽(•⩊ •マ≼ Overlapping kinases found)", overlapping_kinases)
     return sorted(list(overlapping_kinases))
 
-def merging_dataframes(nrgrank_df, davis_df, output_path,overlapping_kinases):
-    #todo implement multi ligand treatment and prduction  w {ligand instead of mastinib } + loop
-    nrgrank_df = pd.read_csv(nrgrank_df)[["Kinase","results_mastinib"]]
-    nrgrank_df["Kinase"]=nrgrank_df["Kinase"].str.split("_").str[1]
+
+def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases):
+    # todo implement multi ligand treatment and prduction  w {ligand instead of mastinib } + loop
+    nrgrank_df = pd.read_csv(nrgrank_df)[["Kinase", "results_mastinib"]]
+    nrgrank_df["Kinase"] = nrgrank_df["Kinase"].str.split("_").str[1]
     nrgrank_df.rename(columns={'results_mastinib': 'res_mastinib_nrg'}, inplace=True)
-    davis_df = pd.read_csv(davis_df)[["Kinase","results_mastinib"]]
+    davis_df = pd.read_csv(davis_df)[["Kinase", "results_mastinib"]]
     davis_df.rename(columns={'results_mastinib': 'res_mastinib_davis'}, inplace=True)
-    merged_df = pd.merge(nrgrank_df, davis_df,on="Kinase")
+    merged_df = pd.merge(nrgrank_df, davis_df, on="Kinase")
 
     # rank organising
     nrg_sorted = merged_df.sort_values(by=merged_df.columns[1])
@@ -39,49 +61,47 @@ def merging_dataframes(nrgrank_df, davis_df, output_path,overlapping_kinases):
     nrg = merged_df.iloc[:, 1]
     dav = merged_df.iloc[:, 2]
     labels = merged_df.iloc[:, 0]
-    plt.figure(figsize=[5,5])
+    plt.figure(figsize=(8, 5), dpi=200)
     plt.scatter(nrg, dav)
     for i, label in enumerate(labels):
-        plt.annotate(label, (nrg[i], dav[i]),fontsize=5)
-    plt.yscale("log")# cant do log for xscale bc negative values
+        plt.annotate(label, (nrg[i], dav[i]), fontsize=5)
+    plt.yscale("log")  # cant do log for xscale bc negative values
     plt.title("mastinib")
     plt.xlabel(merged_df.columns[1])
     plt.ylabel(merged_df.columns[2])
     plt.show()
 
-    #plot the ranks ≽(•⩊ •マ≼
-    #map them as ranks indexes
-    nrg_rank_map = {name:i+1 for i, name in enumerate(nrgnames)}
-    dav_rank_map = {name:i+1 for i, name in enumerate(davnames)}
+    # plot the ranks ≽(•⩊ •マ≼
+    # map them as ranks indexes
+    nrg_rank_map = {name: i + 1 for i, name in enumerate(nrgnames)}
+    dav_rank_map = {name: i + 1 for i, name in enumerate(davnames)}
     # new rank columsn ≽(•⩊ •マ≼ ≽(•⩊ •マ≼
     ranked_df["nrg_rank"] = ranked_df["Kinase"].map(nrg_rank_map)
     ranked_df["dav_rank"] = ranked_df["Kinase"].map(dav_rank_map)
 
     plt.figure(figsize=(8, 5), dpi=200)
-    plt.scatter(ranked_df['nrg_rank'],ranked_df['dav_rank'])
+    plt.scatter(ranked_df['nrg_rank'], ranked_df['dav_rank'])
     for i in range(len(ranked_df)):
         plt.annotate(ranked_df["Kinase"].iloc[i], (ranked_df["nrg_rank"].iloc[i],
-                                                    ranked_df["dav_rank"].iloc[i]), fontsize = 8, ha = 'center')
+                                                   ranked_df["dav_rank"].iloc[i]), fontsize=8, ha='center')
     plt.xlabel("nrg ranks")
     plt.ylabel("dav ranks")
     plt.tight_layout()
     plt.show()
-
-    #plot punnet squares of blanks ฅ≽(•⩊ •マฅ≼
-
     return ranked_df
 
+
+def punnet_ligand(input_dir, output_punnet_dir):
+    print("≽(•⩊ •マ≼ )")
+
+
 if __name__ == '__main__':
-    davis_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx")
-    #nrgrank_df = pd.read_csv(r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases.csv")
+    davis_df = pd.read_excel(r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx")
+    # nrgrank_df = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank",verbose=True,output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
+    nrgrank_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
 
-    nrgrank_df = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank")
+    overlapping_kinases = overlap_theo_exp(empiric_df=davis_df, experimental_df=nrgrank_df, verbose=False)
 
-    #overlapping_kinases = overlap_theo_exp(empiric_df=davis_df, experimental_df=nrgrank_df)
+    # merged_df = merging_dataframes(nrgrank_df=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv",davis_df=r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx",output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/dataframe_cf_kinases_merged.csv",overlapping_kinases=overlapping_kinases)
 
-    # merged_df = merging_dataframes(
-    #     nrgrank_df=r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases.csv",
-    #     davis_df=r"C:\Users\sophi\Documents\NRG\KINASES\csv_davis_to_compare_sample_to.csv",
-    #     output_path=r"C:\Users\sophi\Documents\NRG\KINASES\dataframe_cf_kinases_merged.csv",
-    #     overlapping_kinases=overlapping_kinases
-    # )
+    # punnet_ligand(input_dir=, output_punnet_dir=)
