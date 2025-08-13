@@ -41,7 +41,7 @@ def overlap_theo_exp(empiric_df, experimental_df, verbose):
     verbose and print("≽(•⩊ •マ≼ Overlapping kinases found : ", overlapping_kinases)
     return sorted(list(overlapping_kinases))
 
-def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases):  # resetting index so Kinase goes back to column
+def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases):
     ligands = nrgrank_df.columns.tolist()[1:]
     merged_df = pd.DataFrame({"Kinase": overlapping_kinases})
     davis_df = davis_df.fillna(20000)
@@ -49,16 +49,21 @@ def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases): 
     nrg_index = 1
     dav_index = 2
 
+    # ini figure of ROC curves
     roc_data = []
     colors = cm.tab20(np.linspace(0, 1, len(ligands)))
+    plt.figure(figsize=(8, 8), dpi=200)
+    plt.plot([0, 1], [0, 1], color='red', linestyle='--')
 
     for ligand in ligands:
+        #avoiding error
         nrgrank_sub = nrgrank_df[["Kinase", ligand]].copy()
         davis_sub = davis_df[["Kinase", ligand]].copy()
 
         nrgrank_sub.rename(columns={ligand: f"{ligand}_nrg"}, inplace=False)
         davis_sub.rename(columns={ligand: f"{ligand}_dav"}, inplace=False)
 
+        #todo: outer here
         merged_df = pd.merge(merged_df, nrgrank_sub, on="Kinase", suffixes=("_x","_dav"),  how="inner")
         merged_df = pd.merge(merged_df, davis_sub, on="Kinase", suffixes=("_y","_nrg"), how="inner")
         merged_df.to_csv(output_path, index=False)
@@ -75,10 +80,9 @@ def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases): 
 
         nrg = ranked_df.iloc[:, nrg_index]
         dav = ranked_df.iloc[:, dav_index]
-        nrg_index += 2 #skipping one column -> next nrg column
-        dav_index += 2 #skipping one column -> next davis column
-
-        labels = ranked_df.iloc[:, 0]
+        #skipping columns to maintain good indexing
+        nrg_index += 2
+        dav_index += 2
 
         # ROC curve implementation
         davis_true = (dav < 20000).astype(int)
@@ -86,19 +90,9 @@ def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases): 
         fpr, tpr, _ = roc_curve(davis_true, nrg_inverted_scores)
         roc_auc = auc(fpr, tpr)
         roc_data.append((ligand, fpr, tpr, roc_auc, colors[len(roc_data)]))
-
-        #------------------------------------------------------------------------- PLOTTING
-        plt.figure(figsize=(8, 8), dpi=200)
-        plt.plot([0, 1], [0, 1], color='red', linestyle='--', label=f"{ligand} (AUC = {roc_auc:.2f})")
-        # plt.plot(fpr, tpr, label=f'ROC curve (AUC = {roc_auc:.2f})', color='blue')
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.title(f"ROC curving for all ligands combined")
-        plt.legend(loc="lower right",fontsize=7)
-        plt.grid(True)
-        plt.show()
-
-
+        plt.plot(fpr, tpr, color=colors[len(roc_data) - 1],
+                 label=f"{ligand} (AUC = {roc_auc:.2f})")
+    #------------------------------------------------------------------------- PLOTTING
         # plt.figure(figsize=(8, 8), dpi=200)
         # plt.scatter(nrg, dav)
         # for i, label in enumerate(labels):
@@ -125,6 +119,14 @@ def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases): 
     #     plt.ylabel("dav ranks")
     #     plt.tight_layout()
     #     plt.show()
+
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title(f"ROC curving for all ligands combined")
+    plt.legend(loc="lower right", fontsize=8)
+    plt.grid(True)
+    plt.show()
+
     # return ranked_df
 
 
