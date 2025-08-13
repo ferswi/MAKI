@@ -6,13 +6,13 @@ Produced within the Najmanovich Research Group (May 2025 -> August 2025).
 import argparse
 import os
 import re
-import shutil
 from pathlib import Path
 from getcleftpy import run_getcleft
 from nrgrank import process_target, process_ligands, nrgrank_main, generate_conformers
 from tqdm import tqdm
 import subprocess
 
+## personal function
 # def __list_files_cleft(input_dir):
 #     file_list = os.listdir(input_dir)
 #     #id_list = [file.split('_')[1] for file in file_list]
@@ -33,11 +33,11 @@ def obabel_translate(input_dir, output_path):
                 text=True
             )
             if result.returncode != 0:
-                print(f"obabel failed with {result.returncode}")
+                print(f"Obabel failed with {result.returncode}")
             else:
                 continue
         except FileNotFoundError:
-            print(f"File for the conversion not found at {pdb_file}")
+            print(f"File for the conversion not found : {pdb_file}")
             break
     return output_path
 
@@ -58,7 +58,7 @@ def getcleft(input_dir, output_clefts_proteome, verbose=False, delete_clfs=True 
             except Exception as e:
                 verbose and print(f"≽(•⩊ •マ≼ GetCleft failed for {pdb_path}: {e} :(")
         else:
-            verbose and print(f"≽(•⩊ •マ≼  ; file {pdb_path} for getcleft cannot be found, find it >:(")
+            verbose and print(f"≽(•⩊ •マ≼  ; file {pdb_path} for GetCleft cannot be found, find it >:(")
 
 def remove_clfs(clefts_id_folder, verbose=False):
     include_pattern = re.compile(r'_clf_([1-9][0-9]{0,2})\.pdb$', re.IGNORECASE)
@@ -79,7 +79,7 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
         if ligand_file.endswith(".mol2"):
             conformers_per_molecule=1
             if not ligand_file:
-                verbose and print("catastrophic failure,no mol2 files here, find the drugs ! ")
+                verbose and print("Catastrophic failure,no mol2 files here, find the drugs ! ")
             ligand_name = Path(ligand_file).stem
             ligand_save_dir = process_ligands(
                 ligand_path=os.path.join(ligands_dir,ligand_file),
