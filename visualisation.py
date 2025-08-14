@@ -1,3 +1,4 @@
+# todo : temporary plotting and visualising file. See MAKI.py for full and refactored pipeline. (as of 14/08)
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -41,10 +42,10 @@ def overlap_theo_exp(empiric_df, experimental_df, verbose):
     verbose and print("≽(•⩊ •マ≼ Overlapping kinases found : ", overlapping_kinases)
     return sorted(list(overlapping_kinases))
 
-def merging_df_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kinases):
+def merging_dfs_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kinases,values_plotting, ranks_plotting, roc_curving,contingency_table):
     ligands = nrgrank_df.columns.tolist()[1:]
     merged_df = pd.DataFrame({"Kinase": overlapping_kinases})
-    #davis_df = davis_df.fillna(20000)
+    davis_df = davis_df.fillna(20000)
 
     nrg_index = 1
     dav_index = 2
@@ -56,14 +57,12 @@ def merging_df_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kinas
     plt.plot([0, 1], [0, 1], color='red', linestyle='--')
 
     for ligand in ligands:
-        #avoiding error
         nrgrank_sub = nrgrank_df[["Kinase", ligand]].copy()
         davis_sub = davis_df[["Kinase", ligand]].copy()
 
         nrgrank_sub.rename(columns={ligand: f"{ligand}_nrg"}, inplace=False)
         davis_sub.rename(columns={ligand: f"{ligand}_dav"}, inplace=False)
 
-        #todo: outer here
         merged_df = pd.merge(merged_df, nrgrank_sub, on="Kinase", suffixes=("_x","_dav"),  how="inner")
         merged_df = pd.merge(merged_df, davis_sub, on="Kinase", suffixes=("_y","_nrg"), how="inner")
         merged_df.to_csv(output_path, index=False)
@@ -77,57 +76,77 @@ def merging_df_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kinas
         ranked_df = merged_df.copy()
         ranked_df['nrgnames_sorted'] = pd.Series(nrgnames)
         ranked_df['davnames_sorted'] = pd.Series(davnames)
-
         nrg = ranked_df.iloc[:, nrg_index]
         dav = ranked_df.iloc[:, dav_index]
-        #skipping columns to maintain good indexing
+        #skipping columns to maintain good ligand indexing.
         nrg_index += 2
         dav_index += 2
 
-        # ROC curve implementation
+        # ROC curve implementation & ini of the roc figure, one figure w all ligands within
         davis_true = (dav < 20000).astype(int)
-        nrg_inverted_scores = -nrg
+        nrg_inverted_scores = -nrg # roc curve logic assumes bigger is more likely to be +.
         fpr, tpr, _ = roc_curve(davis_true, nrg_inverted_scores)
         roc_auc = auc(fpr, tpr)
         roc_data.append((ligand, fpr, tpr, roc_auc, colors[len(roc_data)]))
         plt.plot(fpr, tpr, color=colors[len(roc_data) - 1],
                  label=f"{ligand} (AUC = {roc_auc:.2f})")
-    #------------------------------------------------------------------------- PLOTTING
-        # plt.figure(figsize=(8, 8), dpi=200)
-        # plt.scatter(nrg, dav)
-        # for i, label in enumerate(labels):
-        #     plt.annotate(label, (nrg[i], dav[i]), fontsize=5)
-        # plt.yscale("log")  # cant do log for xscale bc negative values
-        # plt.title(f"Scores value comparison for {ligand}")
-        # plt.xlabel(ranked_df.columns[nrg_index])
-        # plt.ylabel(ranked_df.columns[dav_index])
-        # plt.show()
 
-    #     # plot the ranks ≽(•⩊ •マ≼
-    #     nrg_rank_map = {name: i + 1 for i, name in enumerate(nrgnames)} # mapping them as indexes
-    #     dav_rank_map = {name: i + 1 for i, name in enumerate(davnames)}
-    #     # new rank columns ฅ≽(•⩊ •マฅ≼)
-    #     ranked_df["nrg_rank"] = ranked_df["Kinase"].map(nrg_rank_map)
-    #     ranked_df["dav_rank"] = ranked_df["Kinase"].map(dav_rank_map)
-    #     plt.figure(figsize=(8, 8), dpi=200)
-    #     plt.scatter(ranked_df['nrg_rank'], ranked_df['dav_rank'])
-    #     for i in range(len(ranked_df)):
-    #         plt.annotate(ranked_df["Kinase"].iloc[i], (ranked_df["nrg_rank"].iloc[i],
-    #                                                    ranked_df["dav_rank"].iloc[i]), fontsize=8, ha='center')
-    #     plt.title(f"Ranks comparison for each kinase against {ligand}")
-    #     plt.xlabel("nrg ranks")
-    #     plt.ylabel("dav ranks")
-    #     plt.tight_layout()
-    #     plt.show()
+        if values_plotting:
+            plt.figure(figsize=(8, 8), dpi=200)
+            plt.scatter(nrg, dav)
+            for i, label in enumerate(ligands): #todo : labels ?
+                plt.annotate(label, (nrg[i], dav[i]), fontsize=5)
+            plt.yscale("log")  # cant do log for xscale bc negative values
+            plt.title(f"Scores value comparison for {ligand}")
+            plt.xlabel(ranked_df.columns[nrg_index])
+            plt.ylabel(ranked_df.columns[dav_index])
+            plt.show()
+        else:
+            continue
 
-    plt.xlabel("False Positive Rate")
-    plt.ylabel("True Positive Rate")
-    plt.title(f"ROC curving for all ligands combined")
-    plt.legend(loc="lower right", fontsize=8)
-    plt.ylim([0.0, 1])
-    plt.xlim([0.0, 1])
-    plt.show()
+        if ranks_plotting:
+            nrg_rank_map = {name: i + 1 for i, name in enumerate(nrgnames)} # mapping them as indexes
+            dav_rank_map = {name: i + 1 for i, name in enumerate(davnames)}
+            # new rank columns ฅ≽(•⩊ •マฅ≼)
+            ranked_df["nrg_rank"] = ranked_df["Kinase"].map(nrg_rank_map)
+            ranked_df["dav_rank"] = ranked_df["Kinase"].map(dav_rank_map)
+            plt.figure(figsize=(8, 8), dpi=200)
+            plt.scatter(ranked_df['nrg_rank'], ranked_df['dav_rank'])
+            for i in range(len(ranked_df)):
+                plt.annotate(ranked_df["Kinase"].iloc[i], (ranked_df["nrg_rank"].iloc[i],
+                                                           ranked_df["dav_rank"].iloc[i]), fontsize=8, ha='center')
+            plt.title(f"Ranks comparison for each kinase against {ligand}")
+            plt.xlabel("nrg ranks")
+            plt.ylabel("dav ranks")
+            plt.tight_layout()
+            plt.show()
+        else:
+            continue
+        if roc_curving:
+            plt.xlabel("False Positive Rate")
+            plt.ylabel("True Positive Rate")
+            plt.title(f"ROC curving for all ligands combined")
+            plt.legend(loc="lower right", fontsize=8)
+            plt.ylim([0.0, 1])
+            plt.xlim([0.0, 1])
+            plt.show()
+        else:
+            continue
 
+        if contingency_table:
+            if davis_df.shape != nrgrank_df.shape:
+                raise ValueError("The dataframes don't have the same shape.", print("nrg : ",nrgrank_df.shape, "davis : ",davis_df.shape))
+            mask_davis = ~davis_df.isna().values.ravel()
+            mask_nrgrank = ~nrgrank_df.isna().values.ravel()
+            contingency = pd.crosstab(mask_davis, mask_nrgrank,
+                                      rownames=["Davis"], colnames=["nrgrank"])
+            contingency.index = contingency.index.map({True: "binding", False: "no-binding"})
+            contingency.columns = contingency.columns.map({True: "binding", False: "no-binding"})
+            #ratios = contingency / contingency.values.sum()
+            return contingency
+
+        else:
+            continue
     return ranked_df
 
 if __name__ == '__main__':
@@ -140,7 +159,7 @@ if __name__ == '__main__':
     nrgrank_df\
         = pd.read_csv(r"C:\Users\sophi\Documents\NRG\KINASES\nrgrank_dataframe.csv")
     overlapping_kinases = overlap_theo_exp(empiric_df=davis_df, experimental_df=nrgrank_df, verbose=False)
-    merged_df = merging_df_and_plotting(nrgrank_df=nrgrank_df, davis_df=davis_df,
+    merged_df = merging_dfs_and_plotting(nrgrank_df=nrgrank_df, davis_df=davis_df,
                                    output_path=r"C:\Users\sophi\Documents\NRG\KINASES\merged_df.csv",
-                                   overlapping_kinases=overlapping_kinases)
+                                   overlapping_kinases=overlapping_kinases,values_plotting=True, ranks_plotting=True,roc_curving=True,contingency_table=True )
 
