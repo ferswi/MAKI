@@ -41,10 +41,10 @@ def overlap_theo_exp(empiric_df, experimental_df, verbose):
     verbose and print("≽(•⩊ •マ≼ Overlapping kinases found : ", overlapping_kinases)
     return sorted(list(overlapping_kinases))
 
-def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases):
+def merging_df_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kinases):
     ligands = nrgrank_df.columns.tolist()[1:]
     merged_df = pd.DataFrame({"Kinase": overlapping_kinases})
-    davis_df = davis_df.fillna(20000)
+    #davis_df = davis_df.fillna(20000)
 
     nrg_index = 1
     dav_index = 2
@@ -124,11 +124,11 @@ def merging_dataframes(nrgrank_df, davis_df, output_path, overlapping_kinases):
     plt.ylabel("True Positive Rate")
     plt.title(f"ROC curving for all ligands combined")
     plt.legend(loc="lower right", fontsize=8)
-    plt.grid(True)
+    plt.ylim([0.0, 1])
+    plt.xlim([0.0, 1])
     plt.show()
 
-    # return ranked_df
-
+    return ranked_df
 
 if __name__ == '__main__':
     # davis_df = pd.read_excel(r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx")
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     nrgrank_df\
         = pd.read_csv(r"C:\Users\sophi\Documents\NRG\KINASES\nrgrank_dataframe.csv")
     overlapping_kinases = overlap_theo_exp(empiric_df=davis_df, experimental_df=nrgrank_df, verbose=False)
-    merged_df = merging_dataframes(nrgrank_df=nrgrank_df, davis_df=davis_df,
+    merged_df = merging_df_and_plotting(nrgrank_df=nrgrank_df, davis_df=davis_df,
                                    output_path=r"C:\Users\sophi\Documents\NRG\KINASES\merged_df.csv",
                                    overlapping_kinases=overlapping_kinases)
 

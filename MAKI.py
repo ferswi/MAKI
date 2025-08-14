@@ -12,12 +12,12 @@ from nrgrank import process_target, process_ligands, nrgrank_main, generate_conf
 from tqdm import tqdm
 import subprocess
 
-## personal function
-# def __list_files_cleft(input_dir):
-#     file_list = os.listdir(input_dir)
-#     #id_list = [file.split('_')[1] for file in file_list]
-#     # id_list = [".".join(file.split("-")[:2]) for file in file_list] #this pattern adaptation is for AF notation.
-#     return id_list, file_list
+# personal function
+def __list_files_cleft(input_dir):
+    file_list = os.listdir(input_dir)
+    id_list = [file.split('_')[1] for file in file_list]
+    #id_list = [".".join(file.split("-")[:2]) for file in file_list] #AF2 notation
+    return id_list, file_list
 
 def obabel_translate(input_dir, output_path):
     output_path.mkdir(parents=False, exist_ok=True)
@@ -41,7 +41,7 @@ def obabel_translate(input_dir, output_path):
             break
     return output_path
 
-def getcleft(input_dir, output_clefts_proteome, verbose=False, delete_clfs=True ):
+def getcleft(input_dir, output_clefts_proteome, verbose=True, delete_clfs=True ):
     os.makedirs(output_clefts_proteome, exist_ok=True)
     file_list = os.listdir(input_dir)
     for index, pdb_path in enumerate(file_list):
@@ -93,7 +93,7 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
         mol2_kinases_path =(r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_to_mol2_kinases")
         mol2_kinases = sorted(next(os.walk(mol2_kinases_path), (None, None, []))[2])
 
-        for kin_target in mol2_kinases[:403]:
+        for kin_target in mol2_kinases:
             if kin_target.endswith(".mol2"):
                 kinase_name = (kin_target.split("_")[1])
                 kinase_dir = next((d for d in Path(root_cleft_dir).iterdir() if d.is_dir() and d.name == kinase_name), None)
@@ -116,10 +116,11 @@ def nrgrank(ligands_dir,root_cleft_dir, output_dir,verbose=True):
                     verbose and print(f" ฅ≽(•⩊ •マฅ≼ NRGrank ran !  {result_file_path}")
 
 if __name__ == '__main__':
-    #id_list, file_list = __list_files_cleft(input_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_kinases")
+    obabel_translate(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",output_path=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated")
+    id_list, file_list = __list_files_cleft(input_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_kinases")
 
-    getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts")
-    nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_ligands", root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_kinase_clefts", output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank")
+    getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts")
+    nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_ligands", root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts", output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank")
 
 
 
