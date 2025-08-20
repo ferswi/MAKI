@@ -255,31 +255,31 @@ def plotting(ligands,ranked_df,values_plotting, ranks_plotting, roc_curving, con
 
 # -------------------------------------------------------------------------
 if __name__ == '__main__':
+    id_list, file_list = __list_files_cleft(
+        input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases")
+
     # obabel_translate(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",output_path=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated")
 
-    skeletal_path= r"/lustre09/project/6049264/sbernarr/MAKI"
+    davis_df = pd.read_excel(r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx")
 
-    davis_df = pd.read_excel(r"/lustre09/project/6049264/sbernarr/MAKI/filtered2_davis_data.xlsx")
-
-    # nrgrank_df, ligands = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank",
-    #                                           verbose=True,
-    #                                           output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
-    nrgrank_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
+    nrgrank_df, ligands = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank",
+                                              verbose=True,
+                                              output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
+    #nrgrank_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
 
     overlapping_kinases = find_kins_overlapping_dfs(empiric_df=davis_df, experimental_df=nrgrank_df, verbose=False)
 
-    id_list, file_list = __list_files_cleft(
-        input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases")
+
 
     getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",
              output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts")
 
-    nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_ligands",
-            root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts",
-            output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",
-            kinase_mol_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_to_mol2_kinases")
+    # nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_ligands",
+    #         root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts",
+    #         output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",
+    #         kinase_mol_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_to_mol2_kinases")
 
-    merging_dfs(nrgrank_df, davis_df, output_path=skeletal_path,overlapping_kinases=overlapping_kinases)
+    merging_dfs(nrgrank_df, davis_df, output_path=r"/lustre09/project/6049264/sbernarr/MAKI/",overlapping_kinases=overlapping_kinases)
 
     #plotting(ligands,ranked_df,values_plotting=True, ranks_plotting=True,roc_curving=True, contingency_table=True)
 
