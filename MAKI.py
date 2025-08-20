@@ -1,8 +1,4 @@
-'''
-This is MAKI ฅ≽(•⩊ •マ≼  It's a ( Molecule Against Kinase Inspector) tool. It's an attempt to do massive inverse screening and present some visualisation of the results.
-Written by: Sophie Bernard(-Doucet)
-Produced within the Najmanovich Research Group (May 2025 -> August 2025).
-'''
+
 import argparse
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -26,8 +22,6 @@ def __list_files_cleft(input_dir):
     # id_list = [".".join(file.split("-")[:2]) for file in file_list] #AF2 notation
     return id_list, file_list
 
-
-# optional functions :
 def obabel_translate(input_dir, output_path):
     output_path.mkdir(parents=False, exist_ok=True)
     pdb_files = list(input_dir.glob("*.pdb"))
@@ -47,7 +41,6 @@ def obabel_translate(input_dir, output_path):
             raise (FileNotFoundError(f"File for the conversion not found : {pdb_file}"))
     return output_path
 
-
 def remove_clfs(clefts_id_folder, verbose=False):
     include_pattern = re.compile(r'_clf_([1-9][0-9]{0,2})\.pdb$', re.IGNORECASE)
     for root, _, files in os.walk(clefts_id_folder):
@@ -60,8 +53,6 @@ def remove_clfs(clefts_id_folder, verbose=False):
                 except Exception as e:
                     verbose and print(f"Couldn't download ; {source_path}: {e}")
 
-
-## PRAISE: This is clever and is actually more efficient than what I would have gone with (an inner join from the start)
 def find_kins_overlapping_dfs(empiric_df, experimental_df, verbose):
     empiric_kinases = set(empiric_df["Kinase"])
 
@@ -72,8 +63,6 @@ def find_kins_overlapping_dfs(empiric_df, experimental_df, verbose):
     verbose and print("≽(•⩊ •マ≼ Overlapping kinases found : ", overlapping_kinases)
     return sorted(list(overlapping_kinases))
 
-
-# main pipeline functions :
 def getcleft(input_dir, output_clefts_proteome, verbose=True, delete_clfs=True, seperator="_"):
     os.makedirs(output_clefts_proteome, exist_ok=True)
     file_list = os.listdir(input_dir)
@@ -93,18 +82,17 @@ def getcleft(input_dir, output_clefts_proteome, verbose=True, delete_clfs=True, 
         else:
             verbose and print(f"≽(•⩊ •マ≼  ; file {pdb_path} for GetCleft cannot be found, find it >:(")
 
-
 def nrgrank(ligands_dir, root_cleft_dir, output_dir, kinase_mol_dir, seperator="_", verbose=True):
     for ligand_file in os.listdir(ligands_dir):
         if ligand_file.endswith(".mol2"):
             conformers_per_molecule = 1
             if not ligand_file:
-            ligand_name = Path(ligand_file).stem
-            ligand_save_dir = process_ligands(
-                ligand_path=os.path.join(ligands_dir, ligand_file),
-                conformers_per_molecule=conformers_per_molecule,
-                output_dir=os.path.join(ligands_dir, ligand_name),
-                overwrite=False)
+                ligand_name = Path(ligand_file).stem
+                ligand_save_dir = process_ligands(
+                    ligand_path=os.path.join(ligands_dir, ligand_file),
+                    conformers_per_molecule=conformers_per_molecule,
+                    output_dir=os.path.join(ligands_dir, ligand_name),
+                    overwrite=False)
         else:
             continue
 
@@ -157,22 +145,13 @@ def creating_nrgrank_df(input_dir, verbose, output_path):
     nrgrank_df.to_csv(output_path)
     return nrgrank_df, ligands
 
-
-##todo SUGGESTION: This function should really be broken up. It is extremely long and dense, I'll try to find breakoff points for subfunctions.
-def merging_dfs_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kinases, values_plotting, ranks_plotting,
-                             roc_curving, contingency_table):
+def merging_dfs(nrgrank_df, davis_df, output_path, overlapping_kinases):
     ligands = nrgrank_df.columns.tolist()[1:]
     merged_df = pd.DataFrame({"Kinase": overlapping_kinases})
-    davis_df = davis_df.fillna(20000)
+    davis_df = davis_df.fillna(20000) # todo : do i change this logic and keep the nan in both, or fill the nrgrank ones as wlel w 2000 ?
 
     nrg_index = 1
     dav_index = 2
-
-    # ini figure of ROC curves
-    roc_data = []
-    colors = cm.tab20(np.linspace(0, 1, len(ligands)))
-    plt.figure(figsize=(8, 8), dpi=200)
-    plt.plot([0, 1], [0, 1], color='red', linestyle='--')
 
     for ligand in ligands:
         nrgrank_sub = nrgrank_sub.rename(columns={ligand: f"{ligand}_nrg"}, inplace=False)
@@ -191,18 +170,29 @@ def merging_dfs_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kina
         ranked_df = merged_df.copy()
         ranked_df['nrgnames_sorted'] = pd.Series(nrgnames)
         ranked_df['davnames_sorted'] = pd.Series(davnames)
-        nrg = ranked_df.iloc[:, nrg_index]
-        dav = ranked_df.iloc[:,
-              dav_index]
 
-        ##todo where to make divisions
         # skipping columns to maintain good ligand indexing.
         nrg_index += 2
         dav_index += 2
+        ranked_df.to_csv(output_path, index=False)
+    return ligands, ranked_df
+
+def plotting(ligands,ranked_df,values_plotting, ranks_plotting, roc_curving, contingency_table):
+    # ini figure of ROC curves
+    roc_data = []
+    colors = cm.tab20(np.linspace(0, 1, len(ligands)))
+    plt.figure(figsize=(8, 8), dpi=200)
+    plt.plot([0, 1], [0, 1], color='red', linestyle='--')
+    for ligand in ligands:
+        #todo; should these lines be in the loop ?
+        nrg = ranked_df.iloc[:, ranked_df.nrg_index]
+        dav = ranked_df.iloc[:, ranked_df.davindex]
 
         # ROC curve implementation & ini of the roc figure, one figure w all ligands within
         davis_true = (dav < 20000).astype(int)
-        nrg_inverted_scores = -nrg  # roc curve logic assumes bigger is more likely to be +.  ## PRAISE: Nice. I would have forgotten that.
+
+        nrg_inverted_scores = -nrg  # roc curve logic assumes bigger is more likely to be +.
+
         fpr, tpr, _ = roc_curve(davis_true, nrg_inverted_scores)
         roc_auc = auc(fpr, tpr)
         roc_data.append((ligand, fpr, tpr, roc_auc, colors[len(roc_data)]))
@@ -216,13 +206,13 @@ def merging_dfs_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kina
                 plt.annotate(label, (nrg[i], dav[i]), fontsize=5)
             plt.yscale("log")  # cant do log for xscale bc negative values
             plt.title(f"Scores value comparison for {ligand}")
-            plt.xlabel(ranked_df.columns[nrg_index])
-            plt.ylabel(ranked_df.columns[dav_index])
+            plt.xlabel(ranked_df.columns[ranked_df.nrg_index])
+            plt.ylabel(ranked_df.columns[ranked_df.davindex])
             plt.show()
 
         if ranks_plotting:
-            nrg_rank_map = {name: i + 1 for i, name in enumerate(nrgnames)}  # mapping them as indexes
-            dav_rank_map = {name: i + 1 for i, name in enumerate(davnames)}
+            nrg_rank_map = {name: i + 1 for i, name in enumerate(ranked_df.nrgnames)}  # mapping them as indexes
+            dav_rank_map = {name: i + 1 for i, name in enumerate(ranked_df.davnames)}
             # new rank columns ฅ≽(•⩊ •マฅ≼)
             ranked_df["nrg_rank"] = ranked_df["Kinase"].map(nrg_rank_map)
             ranked_df["dav_rank"] = ranked_df["Kinase"].map(dav_rank_map)
@@ -237,7 +227,7 @@ def merging_dfs_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kina
             plt.tight_layout()
             plt.show()
 
-        if roc_curving:  ##todo: remove this from the loop, weird continues thing. NITPICK: This should probably be outside the loop (relegending everytime?)
+        if roc_curving:
             plt.xlabel("False Positive Rate")
             plt.ylabel("True Positive Rate")
             plt.title(f"ROC curving for all ligands combined")
@@ -247,16 +237,19 @@ def merging_dfs_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kina
 
         # not tested this so far
         if contingency_table:
-            if davis_df.shape != nrgrank_df.shape:
-                raise ValueError("The dataframes don't have the same shape.",
-                                 print("nrg : ", nrgrank_df.shape, "davis : ", davis_df.shape))
-            mask_davis = ~davis_df.isna().values.ravel()
-            mask_nrgrank = ~nrgrank_df.isna().values.ravel()
+            davis_col = ranked_df.iloc[:, ranked_df.davindex]
+            nrg_col = ranked_df.iloc[:, ranked_df.nrg_index]
+
+            mask_davis = (davis_col < 20000).values
+            mask_nrgrank = (nrg_col < 100000000).values
+
             contingency = pd.crosstab(mask_davis, mask_nrgrank,
                                       rownames=["Davis"], colnames=["nrgrank"])
             contingency.index = contingency.index.map({True: "binding", False: "no-binding"})
             contingency.columns = contingency.columns.map({True: "binding", False: "no-binding"})
-            # ratios = contingency / contingency.values.sum()
+
+            print("\nContingency Table:")
+            print(contingency)
     return ranked_df
 
 
@@ -264,15 +257,19 @@ def merging_dfs_and_plotting(nrgrank_df, davis_df, output_path, overlapping_kina
 if __name__ == '__main__':
     # obabel_translate(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",output_path=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated")
 
-    davis_df = pd.read_excel(r"C:\Users\sophi\Documents\NRG\KINASES\filtered2_davis_data.xlsx")
-    nrgrank_df, ligands = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank",
-                                              verbose=True,
-                                              output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
+    skeletal_path= r"/lustre09/project/6049264/sbernarr/MAKI"
+
+    davis_df = pd.read_excel(r"/lustre09/project/6049264/sbernarr/MAKI/filtered2_davis_data.xlsx")
+
+    # nrgrank_df, ligands = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_nrgrank",
+    #                                           verbose=True,
+    #                                           output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
     nrgrank_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dataframe.csv")
+
     overlapping_kinases = find_kins_overlapping_dfs(empiric_df=davis_df, experimental_df=nrgrank_df, verbose=False)
 
     id_list, file_list = __list_files_cleft(
-        input_dir=r"C:\Users\sophi\Documents\NRG\KINASES\Kincore_AlphaFold2_ActiveHumanCatalyticKinases_v2\AF2_pdb_kinases")
+        input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases")
 
     getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",
              output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts")
@@ -282,9 +279,11 @@ if __name__ == '__main__':
             output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",
             kinase_mol_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_to_mol2_kinases")
 
-    merging_dfs_and_plotting(nrgrank_df, davis_df, output_path=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_plots",
-                             overlapping_kinases=overlapping_kinases, values_plotting=True, ranks_plotting=True,
-                             roc_curving=True, contingency_table=True)
+    merging_dfs(nrgrank_df, davis_df, output_path=skeletal_path,overlapping_kinases=overlapping_kinases)
+
+    #plotting(ligands,ranked_df,values_plotting=True, ranks_plotting=True,roc_curving=True, contingency_table=True)
+
+
 
 # ------------------------------------------------------------------------- future argumentalisation
 # # id_list, file_list, repoutput, flag poru verbose, flag for clfs
