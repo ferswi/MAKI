@@ -6,7 +6,9 @@ import numpy as np
 import os
 import pandas as pd
 import re
+import requests
 import subprocess
+import time
 
 from collections import defaultdict
 from getcleftpy import run_getcleft
@@ -140,7 +142,7 @@ def creating_nrgrank_df(input_dir, verbose, output_path):
                     data[kinase_file.strip(".csv")][ligand] = nrg_value
 
     nrgrank_df = pd.DataFrame.from_dict(data, orient='index')
-    # nrgrank_df.index.name = 'Kinase'  ##todo CONCERN: This makes the Index named Kinase, but it's not a Kinase column? Your merge function expects a Kinase column
+    nrgrank_df.index.name = 'légume'
     nrgrank_df = nrgrank_df[ligands]
     nrgrank_df.to_csv(output_path)
     return nrgrank_df, ligands
@@ -175,7 +177,7 @@ def merging_dfs(nrgrank_df, davis_df, output_path, overlapping_kinases):
         nrg_index += 2
         dav_index += 2
         ranked_df.to_csv(output_path, index=False)
-    return ligands, ranked_df
+    return ligands
 
 def plotting(ligands,ranked_df,values_plotting, ranks_plotting, roc_curving, contingency_table):
     # ini figure of ROC curves
@@ -258,7 +260,7 @@ if __name__ == '__main__':
     id_list, file_list = __list_files_cleft(
         input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/AF2_pdb_kinases")
 
-    # obabel_translate(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",output_path=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated")
+    #obabel_translate(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",output_path=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated")
 
     davis_df = pd.read_excel(r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx")
 
@@ -271,8 +273,8 @@ if __name__ == '__main__':
 
 
 
-    getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",
-             output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts")
+    #getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans",
+    #         output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts")
 
     # nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_ligands",
     #         root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts",
@@ -314,3 +316,51 @@ if __name__ == '__main__':
 # kin_bd_files = sorted(pdb_kin_bdsite_folder.glob("*.pdb"))
 # if not kin_bd_files:
 #     raise FileNotFoundError("catastrophic failure, there are no binding site files")
+
+
+# def download_alphafold_structures(output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/data/DUAL_250_notKinases",
+#                                    taxon_id=9606, # homosapiens
+#                                    min_len=200,
+#                                    max_len=300,
+#                                    exclude_kinase=True,
+#                                    limit=250):
+#     os.makedirs(output_dir, exist_ok=True)
+#
+#     query = f"(organism_id:{taxon_id}) AND (length:[{min_len} TO {max_len}])"
+#     if exclude_kinase:
+#         query += " NOT annotation:(type:keyword kinase)"
+#
+#     url = "https://rest.uniprot.org/uniprotkb/search"
+#     params = {
+#         "query": query,
+#         "format": "json",
+#         "fields": "accession,proteinName,length",
+#         "size": limit * 2 # ??
+#     }
+#
+#     r = requests.get(url, params=params)
+#     r.raise_for_status()
+#     results = r.json()
+#
+#     count = 0
+#     for entry in results.get("results", []):
+#         uniprot_id = entry["primaryAccession"]
+#         pdb_url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
+#         pdb_path = os.path.join(output_dir, f"{uniprot_id}.pdb")
+#
+#         try:
+#             pdb_response = requests.get(pdb_url)
+#             if pdb_response.status_code == 200 and "ATOM" in pdb_response.text:
+#                 with open(pdb_path, "w") as f:
+#                     f.write(pdb_response.text)
+#                 count += 1
+#                 print(f"≽(•⩊ •マ≼  for {uniprot_id})")
+#             else:
+#                 print(f"not found ; skipping {uniprot_id}")
+#         except Exception as e:
+#             print(f"problem w {uniprot_id}: {e}")
+#
+#         if count >= limit:
+#             break
+#         time.sleep(0.2) # otherwise it fucks
+#     print(f"files : {output_dir}")
