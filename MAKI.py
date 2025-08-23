@@ -5,7 +5,6 @@ import numpy as np
 import os
 import pandas as pd
 import re
-import seaborn as sns
 import subprocess
 from collections import defaultdict
 from getcleftpy import run_getcleft
@@ -97,7 +96,7 @@ def nrgrank(ligands_dir, root_cleft_dir, output_dir, kinase_mol_dir, seperator="
         else:
             continue
 
-        mol2_kinases = sorted(next(os.walk(), (None, None, []))[2])
+        mol2_kinases = sorted(next(os.walk(kinase_mol_dir), (None, None, []))[2])
         for kin_target in mol2_kinases:
             if kin_target.endswith(".mol2"):
                 kinase_name = (kin_target.split(seperator)[1])
@@ -201,7 +200,6 @@ def plotting(ligands, ranked_df, values_plotting, ranks_plotting, roc_curving, c
         nrg = ranked_df.iloc[:, nrg_index[i]]
         dav = ranked_df.iloc[:, dav_index[i]]
 
-        # ROC curve implementation & ini of the roc figure, one figure w all ligands within
         davis_true = (dav < 20000).astype(int)
 
         nrg_inverted_scores = -nrg  # roc curve logic assumes bigger is more likely to be +.
@@ -221,7 +219,7 @@ def plotting(ligands, ranked_df, values_plotting, ranks_plotting, roc_curving, c
             plt.title(f"Scores value comparison for {ligand}")
             plt.xlabel(ranked_df.columns[nrg_index])
             plt.ylabel(ranked_df.columns[dav_index])
-            plt.savefig(os.path.join("plots", f"{ligand}_values.png"), bbox_inches="tight")
+            plt.savefig(os.path.join("/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"{ligand}_values.png"), bbox_inches="tight")
             plt.close()
 
         if ranks_plotting:
@@ -240,7 +238,7 @@ def plotting(ligands, ranked_df, values_plotting, ranks_plotting, roc_curving, c
             plt.xlabel("nrg ranks")
             plt.ylabel("dav ranks")
             plt.tight_layout()
-            plt.savefig(os.path.join("plots", f"{ligand}_values.png"), bbox_inches="tight")
+            plt.savefig(os.path.join("/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"{ligand}_values.png"), bbox_inches="tight")
             plt.close()
 
         if roc_curving:
@@ -250,13 +248,12 @@ def plotting(ligands, ranked_df, values_plotting, ranks_plotting, roc_curving, c
             plt.legend(loc="lower right", fontsize=8)
             plt.ylim([0.0, 1])
             plt.xlim([0.0, 1])
-            plt.savefig(os.path.join("plots", f"{ligand}_values.png"), bbox_inches="tight")
+            plt.savefig(os.path.join("/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"{ligand}_values.png"), bbox_inches="tight")
             plt.close()
 
         if contingency_table:
             davis_col = ranked_df.iloc[:, dav_index[i]]
             nrg_col = ranked_df.iloc[:, nrg_index[i]]
-            print(davis_col, nrg_col)
 
             mask_davis = (davis_col < 20000).values
             mask_nrgrank = (nrg_col < 10000000).values
@@ -265,16 +262,7 @@ def plotting(ligands, ranked_df, values_plotting, ranks_plotting, roc_curving, c
                                       rownames=["Davis"], colnames=["Nrgrank"])
             contingency.index = contingency.index.map({True: "binding", False: "no-binding"})
             contingency.columns = contingency.columns.map({True: "binding", False: "no-binding"})
-
-            plt.figure(figsize=(5, 4), dpi=200)
-            sns.heatmap(contingency, annot=True, fmt="d", cmap="Blues", cbar=False)
-
-            plt.title(f"Contingency Table for {ligand}")
-            plt.xlabel("Nrgrank")
-            plt.ylabel("Davis")
-
-            plt.savefig(os.path.join("plots", f"{ligand}_contingency.png"), bbox_inches="tight")
-            plt.close()
+            print("this isnt working im really sad and disapointed in myself")
 
     return ranked_df
 
@@ -287,21 +275,21 @@ if __name__ == '__main__':
 
     davis_df = pd.read_excel(r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx")
 
-    nrgrank_df, ligands = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",verbose=True,
-                                             output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dual_dataframe.csv")
-    #nrgrank_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dual_dataframe.csv")
+    #nrgrank_df, ligands = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",verbose=True,
+    #                                         output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dual_dataframe.csv")
+    nrgrank_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dual_dataframe.csv")
 
     overlapping_kinases = find_kins_overlapping_dfs(empiric_df=davis_df, experimental_df=nrgrank_df, verbose=False)
 
     # getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts")
 
-    nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_ligands",
-            root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts",
-            output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",
-            kinase_mol_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated")
+    #nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_ligands",
+    #        root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts",
+    #        output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",
+    #        kinase_mol_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated")
 
     ligands, ranked_df = merging_dfs(nrgrank_df, davis_df,
-                                     output_path=r"/lustre09/project/6049264/sbernarr/MAKI/merged_df.csv",
+                                     output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/merged_df.csv",
                                      overlapping_kinases=overlapping_kinases)
 
     plotting(ligands, ranked_df, values_plotting=True, ranks_plotting=True, roc_curving=True, contingency_table=True,plots_dir=r"/lustre09/project/6049264/sbernarr/MAKI/data/plots")
