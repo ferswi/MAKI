@@ -21,6 +21,7 @@ def __list_files_cleft(input_dir):
     # id_list = [".".join(file.split("-")[:2]) for file in file_list] #AF2 notation
     return id_list, file_list
 
+
 def obabel_translate(input_dir, output_path):
     output_path.mkdir(parents=False, exist_ok=True)
     pdb_files = list(input_dir.glob("*.pdb"))
@@ -40,6 +41,7 @@ def obabel_translate(input_dir, output_path):
             raise (FileNotFoundError(f"File for the conversion not found : {pdb_file}"))
     return output_path
 
+
 def remove_clfs(clefts_id_folder, verbose=False):
     include_pattern = re.compile(r'_clf_([1-9][0-9]{0,2})\.pdb$', re.IGNORECASE)
     for root, _, files in os.walk(clefts_id_folder):
@@ -52,16 +54,17 @@ def remove_clfs(clefts_id_folder, verbose=False):
                 except Exception as e:
                     verbose and print(f"Couldn't download ; {source_path}: {e}")
 
+
 def find_kins_overlapping_dfs(empiric_df, experimental_df, verbose):
     empiric_kinases = set(empiric_df["Kinase"])
 
     experimental_df = experimental_df.reset_index()
-    print(experimental_df)
     experimental_kinases = set(experimental_df["Kinase"])
 
     overlapping_kinases = empiric_kinases.intersection(experimental_kinases)
     verbose and print("≽(•⩊ •マ≼ Overlapping kinases found : ", overlapping_kinases)
     return sorted(list(overlapping_kinases))
+
 
 def getcleft(input_dir, output_clefts_proteome, verbose=True, delete_clfs=True, seperator="_"):
     os.makedirs(output_clefts_proteome, exist_ok=True)
@@ -81,6 +84,7 @@ def getcleft(input_dir, output_clefts_proteome, verbose=True, delete_clfs=True, 
                 verbose and print(f"≽(•⩊ •マ≼ GetCleft failed for {pdb_path}: {e} :(")
         else:
             verbose and print(f"≽(•⩊ •マ≼  ; file {pdb_path} for GetCleft cannot be found, find it >:(")
+
 
 def nrgrank(ligands_dir, root_cleft_dir, output_dir, kinase_mol_dir, seperator="_", verbose=True):
     for ligand_file in os.listdir(ligands_dir):
@@ -109,7 +113,7 @@ def nrgrank(ligands_dir, root_cleft_dir, output_dir, kinase_mol_dir, seperator="
                     target_mol2_path=str(os.path.join(kinase_mol_dir, kin_target)),
                     binding_site_file_path=str(bdsite_file_path),
                     create_new_dir=True,
-                    overwrite=True)
+                    overwrite=False)
 
                 if target_save_dir:
                     result_file_path = nrgrank_main(target_name=kinase_name,
@@ -121,6 +125,7 @@ def nrgrank(ligands_dir, root_cleft_dir, output_dir, kinase_mol_dir, seperator="
                                                     USE_CLASH=True,
                                                     POSES_SAVED_PER_MOLECULE=0)
                     verbose and print(f" ฅ≽(•⩊ •マฅ≼ NRGrank ran !  {result_file_path}")
+
 
 def creating_nrgrank_df(input_dir, verbose, output_path):
     data = defaultdict(dict)
@@ -146,6 +151,7 @@ def creating_nrgrank_df(input_dir, verbose, output_path):
     nrgrank_df.to_csv(output_path)
     return nrgrank_df, ligands
 
+
 def merging_dfs(nrgrank_df, davis_df, output_path, overlapping_kinases):
     nrgrank_df = nrgrank_df.set_index("Kinase")
     davis_df = davis_df.set_index("Kinase")
@@ -156,6 +162,7 @@ def merging_dfs(nrgrank_df, davis_df, output_path, overlapping_kinases):
     nrg_index = 1
     dav_index = 2
 
+    # creating merged_df
     for ligand in ligands:
         nrgrank_sub = nrgrank_df[[ligand]].copy()
         davis_sub = davis_df[[ligand]].copy()
@@ -164,26 +171,32 @@ def merging_dfs(nrgrank_df, davis_df, output_path, overlapping_kinases):
 
         merged_df = pd.merge(merged_df, nrgrank_sub, on="Kinase", suffixes=("_x", "_dav"), how="inner")
         merged_df = pd.merge(merged_df, davis_sub, on="Kinase", suffixes=("_y", "_nrg"), how="inner")
-        merged_df.to_csv(output_path, index=False)
+        output_path_merged = os.path.join(output_path, "merged_df.csv")
+        merged_df.to_csv(output_path_merged, index=False)
 
-        # rank organising per ligand
+    ranked_df = merged_df.copy()
+    ranked_df = ranked_df.drop(columns=["Kinase"])
+
+    # creating ranked_df
+    for ligand in ligands:
         nrg_sorted = merged_df.sort_values(by=merged_df.columns[nrg_index])
         nrgnames = nrg_sorted.iloc[:, 0].tolist()
         dav_sorted = merged_df.sort_values(by=merged_df.columns[dav_index])
         davnames = dav_sorted.iloc[:, 0].tolist()
 
-        ranked_df = merged_df.copy()
-        ranked_df['nrgnames_sorted'] = pd.Series(nrgnames)
-        ranked_df['davnames_sorted'] = pd.Series(davnames)
+        ranked_df[f"{ligand}_nrg"] = list(pd.Series(nrgnames))
+        ranked_df[f"{ligand}_dav"] = list(pd.Series(davnames))
 
         # skipping columns to maintain good ligand indexing.
         nrg_index += 2
         dav_index += 2
-        ranked_df = ranked_df.set_index("Kinase")
-        ranked_df.to_csv(output_path, index=False)
-    return ligands, ranked_df
 
-def plotting(ligands, ranked_df, values_plotting, ranks_plotting, roc_curving, contingency_table,plots_dir):
+        output_path_ranked = os.path.join(output_path, "ranked_df.csv")
+        ranked_df.to_csv(output_path_ranked, index=False)
+    return ligands, merged_df, ranked_df
+
+
+def plotting(ligands, merged_df, ranked_df, values_plotting, ranks_plotting, roc_curving, contingency_table, plots_dir):
     os.makedirs(plots_dir, exist_ok=True)
 
     # ini figure of ROC curves
@@ -194,77 +207,94 @@ def plotting(ligands, ranked_df, values_plotting, ranks_plotting, roc_curving, c
 
     nrg_index = [i for i in range(len(ranked_df.columns)) if i % 2 == 0]
     dav_index = [i for i in range(len(ranked_df.columns)) if i % 2 == 1]
+    merged_df = merged_df.set_index("Kinase")
+    skipped = {}
 
     for i, ligand in enumerate(ligands):
-        # todo; should these lines be in the loop ?
-        nrg = ranked_df.iloc[:, nrg_index[i]]
-        dav = ranked_df.iloc[:, dav_index[i]]
+        nrg = merged_df.iloc[:, nrg_index[i]]
+        dav = merged_df.iloc[:, dav_index[i]]
 
         davis_true = (dav < 20000).astype(int)
-
-        nrg_inverted_scores = -nrg  # roc curve logic assumes bigger is more likely to be +.
-
-        fpr, tpr, _ = roc_curve(davis_true, nrg_inverted_scores)
-        roc_auc = auc(fpr, tpr)
-        roc_data.append((ligand, fpr, tpr, roc_auc, colors[len(roc_data)]))
-        plt.plot(fpr, tpr, color=colors[len(roc_data) - 1],
-                 label=f"{ligand} (AUC = {roc_auc:.2f})")
+        nrg_inverted_scores = -nrg
 
         if values_plotting:
             plt.figure(figsize=(8, 8), dpi=200)
-            plt.scatter(nrg, dav)
-            for i, label in enumerate(ligands):
-                plt.annotate(label, (nrg[i], dav[i]), fontsize=5)
+            skipped[ligand] = []
+            for kinase, x, y in zip(merged_df.index, nrg, dav):
+                if x == 100000000 or y == 20000:
+                    skipped[ligand].append(kinase)
+                    continue
+                plt.scatter(x, y, c=["blue"])
+                plt.text(x=x, y=y, s=kinase)
+
+            # for i, label in enumerate(ligands):
+            #     plt.annotate(label, (nrg[i], dav[i]), fontsize=5)
             plt.yscale("log")  # cant do log for xscale bc negative values
             plt.title(f"Scores value comparison for {ligand}")
-            plt.xlabel(ranked_df.columns[nrg_index])
-            plt.ylabel(ranked_df.columns[dav_index])
-            plt.savefig(os.path.join("/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"values_plotting{ligand}.png"), bbox_inches="tight")
-            plt.close()
+            plt.xlabel("NRGRank")
+            plt.ylabel("Davis")
+            plt.savefig(
+                os.path.join(r"/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"values_plotting_{ligand}.png"),
+                bbox_inches="tight")
 
         if ranks_plotting:
-            nrg_rank_map = {name: i + 1 for i, name in
-                            enumerate(ranked_df.columns[nrg_index])}  # mapping them as indexes
-            dav_rank_map = {name: i + 1 for i, name in enumerate(ranked_df.columns[dav_index])}
-            # new rank columns ฅ≽(•⩊ •マฅ≼)
-            ranked_df["nrg_rank"] = ranked_df.index.map(nrg_rank_map)
-            ranked_df["dav_rank"] = ranked_df.index.map(dav_rank_map)
-            plt.figure(figsize=(8, 8), dpi=200)
-            plt.scatter(ranked_df['nrg_rank'], ranked_df['dav_rank'])
-            for j in range(len(ranked_df)):
-                plt.annotate(ranked_df.index, (ranked_df["nrg_rank"].iloc[j],
-                                               ranked_df["dav_rank"].iloc[j]), fontsize=8, ha='center')
-            plt.title(f"Ranks comparison for each kinase against {ligand}")
+            plt.figure()
+            kinase_dict = {
+                kinase: (list(ranked_df[f"{ligand}_nrg"]).index(kinase), list(ranked_df[f"{ligand}_dav"]).index(kinase))
+                for kinase in merged_df.index}
+
+            for kinase, coords in kinase_dict.items():
+                plt.scatter(*coords, c=["red"])
+                plt.text(x=coords[0], y=coords[1], s=kinase)
+            plt.title(f"Ranks comparison, kinase against {ligand}")
             plt.xlabel("nrg ranks")
             plt.ylabel("dav ranks")
-            plt.tight_layout()
-            plt.savefig(os.path.join("/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"ranks_plotting_{ligand}.png"), bbox_inches="tight")
-            plt.close()
-
-        if roc_curving:
-            plt.xlabel("False Positive Rate")
-            plt.ylabel("True Positive Rate")
-            plt.title(f"ROC curving for all ligands combined")
-            plt.legend(loc="lower right", fontsize=8)
-            plt.ylim([0.0, 1])
-            plt.xlim([0.0, 1])
-            plt.savefig(os.path.join("/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"roc_curving_{ligand}.png"), bbox_inches="tight")
-            plt.close()
+            plt.savefig(
+                os.path.join(r"/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"ranks_plotting_{ligand}.png"),
+                bbox_inches="tight")
 
         if contingency_table:
-            davis_col = ranked_df.iloc[:, dav_index[i]]
-            nrg_col = ranked_df.iloc[:, nrg_index[i]]
+            davis_col = merged_df.iloc[:, dav_index[i]]
+            nrg_col = merged_df.iloc[:, nrg_index[i]]
 
             mask_davis = (davis_col < 20000).values
             mask_nrgrank = (nrg_col < 10000000).values
+            print(mask_nrgrank)
 
             contingency = pd.crosstab(mask_davis, mask_nrgrank,
                                       rownames=["Davis"], colnames=["Nrgrank"])
+            print(contingency)
             contingency.index = contingency.index.map({True: "binding", False: "no-binding"})
             contingency.columns = contingency.columns.map({True: "binding", False: "no-binding"})
 
-            with open(os.path.join("plots", f"{ligand}_contingency.txt"), "w") as f:
+            with open(os.path.join(r"/lustre09/project/6049264/sbernarr/MAKI/data/plots", f"contingency_{ligand}.txt"),
+                      "w") as f:
                 f.write(contingency.to_string())
+
+    if roc_curving:
+        plt.figure()
+        for i, ligand in enumerate(ligands):
+            nrg = merged_df.iloc[:, nrg_index[i]]
+            dav = merged_df.iloc[:, dav_index[i]]
+
+            davis_true = (dav < 20000).astype(int)
+            nrg_inverted_scores = -nrg
+
+            fpr, tpr, _ = roc_curve(davis_true, nrg_inverted_scores)
+            roc_auc = auc(fpr, tpr)
+            roc_data.append((ligand, fpr, tpr, roc_auc, colors[len(roc_data)]))
+
+            plt.plot(fpr, tpr, color=colors[len(roc_data) - 1],
+                     label=f"{ligand} (AUC = {roc_auc:.2f})")
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("ROC curves, all ligands combined")
+        plt.legend(loc="lower right", fontsize=8)
+        plt.ylim([0.0, 1])
+        plt.xlim([0.0, 1])
+        plt.savefig(os.path.join(r"/lustre09/project/6049264/sbernarr/MAKI/data/plots", "roc_curving_all_ligands.png"),
+                    bbox_inches="tight")
+        plt.close()
 
     return ranked_df
 
@@ -277,50 +307,22 @@ if __name__ == '__main__':
 
     davis_df = pd.read_excel(r"/lustre09/project/6049264/sbernarr/MAKI/data/filtered2_davis_data.xlsx")
 
-    #nrgrank_df, ligands = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",verbose=True,
-    #                                         output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dual_dataframe.csv")
+    # nrgrank_df, ligands = creating_nrgrank_df(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",verbose=True, output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dual_dataframe.csv")
     nrgrank_df = pd.read_csv(r"/lustre09/project/6049264/sbernarr/MAKI/data/nrgrank_dual_dataframe.csv")
 
     overlapping_kinases = find_kins_overlapping_dfs(empiric_df=davis_df, experimental_df=nrgrank_df, verbose=False)
 
     # getcleft(input_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_b4trans", output_clefts_proteome=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts")
 
-    #nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_ligands",
+    # nrgrank(ligands_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_ligands",
     #        root_cleft_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinase_clefts",
     #        output_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_nrgrank",
     #        kinase_mol_dir=r"/lustre09/project/6049264/sbernarr/MAKI/DUAL_kinases_translated")
 
-    ligands, ranked_df = merging_dfs(nrgrank_df, davis_df,
-                                     output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data/merged_df.csv", overlapping_kinases=overlapping_kinases)
+    ligands, merged_df, ranked_df = merging_dfs(nrgrank_df, davis_df,
+                                                output_path=r"/lustre09/project/6049264/sbernarr/MAKI/data",
+                                                overlapping_kinases=overlapping_kinases)
 
-    plotting(ligands, ranked_df, values_plotting=True, ranks_plotting=True, roc_curving=True, contingency_table=True,plots_dir=r"/lustre09/project/6049264/sbernarr/MAKI/data/plots")
+    plotting(ligands, merged_df, ranked_df, values_plotting=False, ranks_plotting=False, roc_curving=False,
+             contingency_table=True, plots_dir=r"/lustre09/project/6049264/sbernarr/MAKI/data/plots")
 
-# ------------------------------------------------------------------------- future argumentalisation
-# # id_list, file_list, repoutput, flag poru verbose, flag for clfs
-# parser = argparse.ArgumentParser(description="Maki pipeline to present the kinases against a chosen set of ligands using NRGRank and introduce further analysis.")
-#
-# parser.add_argument("--test_ligand_set", type=str, required=True,
-#                     help="Path to repo containing all 10 test ligands (X 10  total)")
-# parser.add_argument("--kin_targets_dir", type=str, required=True,
-#                     help="Path to repo containing multiple .mol2 target files (154 total). Aims to do the treatment of one file / run")
-# parser.add_argument("--pdb_kin_bdsite_folder", type=str, required=True,
-#                     help="Path to repo containing PDB binding site files")
-# args = parser.parse_args()
-#
-# # running it on narval
-# test_ligand_set = Path(args.test_ligand_set)
-# test_lig_files = list(test_ligand_set.glob("*.mol2"))
-# if not test_lig_files:
-#     raise FileNotFoundError("catastrophic failure, there are no ligands")
-# test_lig_file = test_lig_files[0]
-# current_ligand_name = test_lig_file.stem
-#
-# kin_targets_dir = Path(args.kin_targets_dir)
-# kin_files = sorted(kin_targets_dir.glob("*.mol2"))
-# if not kin_files:
-#     raise FileNotFoundError("catastrophic failure, there are no mol2 files")
-#
-# pdb_kin_bdsite_folder = Path(args.pdb_kin_bdsite_folder)
-# kin_bd_files = sorted(pdb_kin_bdsite_folder.glob("*.pdb"))
-# if not kin_bd_files:
-#     raise FileNotFoundError("catastrophic failure, there are no binding site files")
